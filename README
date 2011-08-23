@@ -1,0 +1,7 @@
+To compile it, run the following command:
+
+gcc -Wall -o notify_me libnotify.c `pkg-config --libs --cflags glib-2.0 gtk+-2.0` -lnotify
+
+or with gtk-3.0:
+
+gcc -Wall -o notify_me libnotify.c `pkg-config --libs --cflags glib-2.0 gtk+-3.0` -lnotify
