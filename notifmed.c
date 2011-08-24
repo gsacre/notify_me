@@ -11,13 +11,13 @@
 #include <string.h>
 
 int main(void) {
-
         /* Our process ID and Session ID */
         pid_t pid, sid;
 
         /* Fork off the parent process */
         pid = fork();
         if (pid < 0) {
+                printf("Cannot fork the daemon. Exiting...\n");
                 exit(EXIT_FAILURE);
         }
         /* If we got a good PID, then
@@ -29,12 +29,14 @@ int main(void) {
         /* Change the file mode mask */
         umask(0);
 
-        /* Open any logs here */
+        openlog ("notifmed", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+        syslog (LOG_INFO, "Program started by user %d", getuid ());
+
 
         /* Create a new SID for the child process */
         sid = setsid();
         if (sid < 0) {
-                /* Log the failure */
+                syslog (LOG_ERR, "Cannot create a new SID.");
                 exit(EXIT_FAILURE);
         }
 
@@ -42,7 +44,7 @@ int main(void) {
 
         /* Change the current working directory */
         if ((chdir("/")) < 0) {
-                /* Log the failure */
+                syslog (LOG_ERR, "Cannot create a new SID.");
                 exit(EXIT_FAILURE);
         }
 
@@ -55,7 +57,6 @@ int main(void) {
 
         /* The Big Loop */
         while (1) {
-                /* Do some task here ... */
                 NotifyNotification *n;
                 notify_init("Test");
                 n = notify_notification_new ("Title","Body", NULL);
@@ -66,7 +67,7 @@ int main(void) {
                 }
                 g_object_unref(G_OBJECT(n));
 
-                sleep(3); /* wait 30 seconds */
+                sleep(3); /* wait 3 seconds */
         }
         exit(EXIT_SUCCESS);
 }
