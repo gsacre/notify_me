@@ -5,9 +5,12 @@ INCLUDES=-I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/gtk-
 DEFINITIONS=-DGSEAL_ENABLE
 SOURCES=notifmed.c
 OBJECTS=notifmed.o
-TARGET=notifmed
+EXECUTABLE=notifmed
 all: $(OBJECTS)
-	$(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
+	$(CC) -o $(EXECUTABLE) $(OBJECTS) $(LDFLAGS)
 
 notifmed.o:
 	$(CC) -c notifmed.c $(CFLAGS) $(INCLUDES) $(DEFINITIONS)
+
+clean:
+	\rm *.o *~ $(EXECUTABLE)
