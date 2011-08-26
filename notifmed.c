@@ -10,6 +10,7 @@
 #include <syslog.h>
 #include <string.h>
 #include <iniparser.h>
+#include <getopt.h>
 
 int file_exists (char * fileName) {
         struct stat buf;
@@ -21,9 +22,69 @@ int file_exists (char * fileName) {
         return 0;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
         int port = 5586,
             notification_timeout = 5;
+
+        int config_preceeds = 1;
+        int c;
+
+        while (1) {
+                static struct option long_options[] =
+                {
+                        /* These options don't set a flag.
+                         * We distinguish them by their indices. */
+                        {"port",    required_argument, 0, 'p'},
+                        {"timeout", required_argument, 0, 't'},
+                        {"help",    no_argument,       0, 'h'},
+                        {0, 0, 0, 0}
+                };
+                /* getopt_long stores the option index here. */
+                int option_index = 0;
+
+                c = getopt_long (argc, argv, "hp:t:",
+                                long_options, &option_index);
+
+                /* Detect the end of the options. */
+                if (c == -1)
+                        break;
+
+                switch (c)
+                {
+                        case 0:
+                                /* If this option set a flag, do nothing else now. */
+                                if (long_options[option_index].flag != 0)
+                                        break;
+                                printf ("option %s", long_options[option_index].name);
+                                if (optarg)
+                                        printf (" with arg %s", optarg);
+                                printf ("\n");
+                                break;
+
+                        case 'p':
+                                port = atoi(optarg);
+                                config_preceeds = 0;
+                                break;
+
+                        case 't':
+                                notification_timeout = atoi(optarg);
+                                config_preceeds = 0;
+                                break;
+
+                        case 'h':
+                                printf ("Usage:\n");
+                                printf ("%s [-h] [-p port_number] [-t notification_timeout]\n", argv[0]);
+                                exit(EXIT_SUCCESS);
+
+                        case '?':
+                                /* getopt_long already printed an error message. */
+                                break;
+
+                        default:
+                                printf("Unkown parameter. Exiting.\n");
+                                exit(EXIT_FAILURE);
+                }
+        }
 
         /* Our process ID and Session ID */
         pid_t pid, sid;
@@ -48,44 +109,46 @@ int main(void) {
         openlog ("notifmed", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL0);
         syslog (LOG_INFO, "Program started by user %d", getuid ());
 
-        char * home = getenv("HOME");
-        char * home_path_config = malloc(snprintf(NULL, 0, "%s/%s", home, ".notifmedrc") + 1);
-        sprintf(home_path_config, "%s/%s", home, ".notifmedrc");
+        if (config_preceeds) {
+                char * home = getenv("HOME");
+                char * home_path_config = malloc(snprintf(NULL, 0, "%s/%s", home, ".notifmedrc") + 1);
+                sprintf(home_path_config, "%s/%s", home, ".notifmedrc");
 
-        if (file_exists(home_path_config)) {
-                dict = iniparser_load(home_path_config);
-        } else if (file_exists("/etc/notifmed.rc")) {
-                dict = iniparser_load("/etc/notifmed.rc");
-        /* a config file could also be given as argument
-        } else if (file_exists()) {
-                dict = iniparser_load();*/
-        } else {
-                syslog (LOG_INFO, "No configuration file found.");
-                syslog (LOG_INFO, "Using defaults:");
-                syslog (LOG_INFO, "    port = 5586 ; notification_timeout = 5");
-        }
+                if (file_exists(home_path_config)) {
+                        dict = iniparser_load(home_path_config);
+                } else if (file_exists("/etc/notifmed.rc")) {
+                        dict = iniparser_load("/etc/notifmed.rc");
+                        /* a config file could also be given as argument
+                           } else if (file_exists()) {
+                           dict = iniparser_load();*/
+                } else {
+                        syslog (LOG_INFO, "No configuration file found.");
+                        syslog (LOG_INFO, "Using defaults:");
+                        syslog (LOG_INFO, "    port = 5586 ; notification_timeout = 5");
+                }
 
-        if (!dict) {
-                syslog (LOG_ERR, "Dictionary configuration file problem.");
-                closelog();
-                exit(EXIT_FAILURE);
-        }
+                if (!dict) {
+                        syslog (LOG_ERR, "Dictionary configuration file problem.");
+                        closelog();
+                        exit(EXIT_FAILURE);
+                }
 
-        int i;
-        unsigned int hh=dictionary_hash("server");
-        for ( i=0 ; (i<dict->n) && (hh!=dict->hash[i]) ; i++);
-        // No "server" section found
-        if( i == dict->n ) {
-                syslog (LOG_INFO, "No server section found.");
-                syslog (LOG_INFO, "Using defaults:");
-                syslog (LOG_INFO, "    port = 5586 ; notification_timeout = 5");
-        }
+                int i;
+                unsigned int hh=dictionary_hash("server");
+                for ( i=0 ; (i<dict->n) && (hh!=dict->hash[i]) ; i++);
+                // No "server" section found
+                if( i == dict->n ) {
+                        syslog (LOG_INFO, "No server section found.");
+                        syslog (LOG_INFO, "Using defaults:");
+                        syslog (LOG_INFO, "    port = 5586 ; notification_timeout = 5");
+                }
 
-        for ( i++ ; ( i < dict->n ) && strncmp(dict->key[i],"server:",6) == 0 ; i++ ) {
-                if (strcmp(dict->key[i],"server:port") == 0) {
-                        port = atoi(dict->val[i]);
-                } else if (strcmp(dict->key[i],"server:notification_timeout") == 0) {
-                        notification_timeout = atoi(dict->val[i]);
+                for ( i++ ; ( i < dict->n ) && strncmp(dict->key[i],"server:",6) == 0 ; i++ ) {
+                        if (strcmp(dict->key[i],"server:port") == 0) {
+                                port = atoi(dict->val[i]);
+                        } else if (strcmp(dict->key[i],"server:notification_timeout") == 0) {
+                                notification_timeout = atoi(dict->val[i]);
+                        }
                 }
         }
         syslog (LOG_INFO, "Config found: port=%i - notification_timeout=%i", port, notification_timeout);
