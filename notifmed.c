@@ -11,6 +11,8 @@
 #include <string.h>
 #include <iniparser.h>
 #include <getopt.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 int file_exists (char * fileName) {
         struct stat buf;
@@ -24,10 +26,15 @@ int file_exists (char * fileName) {
 
 int main(int argc, char **argv) {
         int port = 5586,
-            notification_timeout = 5;
+            notification_timeout = 5,
+            config_preceeds = 1,
+            sockfd,
+            newsockfd,
+            c;
 
-        int config_preceeds = 1;
-        int c;
+        socklen_t clilen;
+        char buffer[256];
+        struct sockaddr_in serv_addr, cli_addr;
 
         while (1) {
                 static struct option long_options[] =
@@ -161,7 +168,27 @@ int main(int argc, char **argv) {
                 exit(EXIT_FAILURE);
         }
 
+        // Preparing the network part
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0) {
+                syslog (LOG_ERR, "Cannot open the socket.");
+                closelog();
+                exit(EXIT_FAILURE);
+        }
 
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+        serv_addr.sin_port = htons(port);
+
+        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+                syslog (LOG_ERR, "Cannot bind the socket.");
+                closelog();
+                exit(EXIT_FAILURE);
+        }
+
+        listen(sockfd,5);
+        clilen = sizeof(cli_addr);
 
         /* Change the current working directory */
         if ((chdir("/")) < 0) {
@@ -189,8 +216,42 @@ int main(int argc, char **argv) {
                 }
                 g_object_unref(G_OBJECT(n));
 
-                sleep(3); /* wait 3 seconds */
+                newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+                if (newsockfd < 0) {
+                        syslog (LOG_ERR, "Cannot accept messages.");
+                        closelog();
+                        close(newsockfd);
+                        close(sockfd);
+                        exit(EXIT_FAILURE);
+                }
+
+                bzero(buffer,256);
+
+                n = read(newsockfd,buffer,255);
+                if (n < 0) {
+                        syslog (LOG_ERR, "Error reading from the socket.");
+                        closelog();
+                        close(newsockfd);
+                        close(sockfd);
+                        exit(EXIT_FAILURE);
+                }
+
+                syslog (LOG_INFO, "Here is the message: %s\n",buffer);
+                n = write(newsockfd,"I got your message",18);
+
+                if (n < 0) {
+                        syslog (LOG_ERR, "Error writing to the socket.");
+                        closelog();
+                        close(newsockfd);
+                        close(sockfd);
+                        exit(EXIT_FAILURE);
+                }
+
+                //sleep(3); /* wait 3 seconds */
         }
+
+        close(newsockfd);
+        close(sockfd);
         closelog();
         exit(EXIT_SUCCESS);
 }
