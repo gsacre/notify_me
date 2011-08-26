@@ -9,10 +9,26 @@
 #include <errno.h>
 #include <syslog.h>
 #include <string.h>
+#include <iniparser.h>
+
+int file_exists (char * fileName) {
+        struct stat buf;
+        int i = stat ( fileName, &buf );
+        /* File found */
+        if ( i == 0 ) {
+                return 1;
+        }
+        return 0;
+}
 
 int main(void) {
+        int port = 5586,
+            notification_timeout = 5;
+
         /* Our process ID and Session ID */
         pid_t pid, sid;
+
+        dictionary *dict;
 
         /* Fork off the parent process */
         pid = fork();
@@ -32,11 +48,53 @@ int main(void) {
         openlog ("notifmed", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL0);
         syslog (LOG_INFO, "Program started by user %d", getuid ());
 
+        char * home = getenv("HOME");
+        char * home_path_config = malloc(snprintf(NULL, 0, "%s/%s", home, ".notifmedrc") + 1);
+        sprintf(home_path_config, "%s/%s", home, ".notifmedrc");
+
+        if (file_exists(home_path_config)) {
+                dict = iniparser_load(home_path_config);
+        } else if (file_exists("/etc/notifmed.rc")) {
+                dict = iniparser_load("/etc/notifmed.rc");
+        /* a config file could also be given as argument
+        } else if (file_exists()) {
+                dict = iniparser_load();*/
+        } else {
+                syslog (LOG_INFO, "No configuration file found.");
+                syslog (LOG_INFO, "Using defaults:");
+                syslog (LOG_INFO, "    port = 5586 ; notification_timeout = 5");
+        }
+
+        if (!dict) {
+                syslog (LOG_ERR, "Dictionary configuration file problem.");
+                closelog();
+                exit(EXIT_FAILURE);
+        }
+
+        int i;
+        unsigned int hh=dictionary_hash("server");
+        for ( i=0 ; (i<dict->n) && (hh!=dict->hash[i]) ; i++);
+        // No "server" section found
+        if( i == dict->n ) {
+                syslog (LOG_INFO, "No server section found.");
+                syslog (LOG_INFO, "Using defaults:");
+                syslog (LOG_INFO, "    port = 5586 ; notification_timeout = 5");
+        }
+
+        for ( i++ ; ( i < dict->n ) && strncmp(dict->key[i],"server:",6) == 0 ; i++ ) {
+                if (strcmp(dict->key[i],"server:port") == 0) {
+                        port = atoi(dict->val[i]);
+                } else if (strcmp(dict->key[i],"server:notification_timeout") == 0) {
+                        notification_timeout = atoi(dict->val[i]);
+                }
+        }
+        syslog (LOG_INFO, "Config found: port=%i - notification_timeout=%i", port, notification_timeout);
 
         /* Create a new SID for the child process */
         sid = setsid();
         if (sid < 0) {
                 syslog (LOG_ERR, "Cannot create a new SID.");
+                closelog();
                 exit(EXIT_FAILURE);
         }
 
@@ -45,6 +103,7 @@ int main(void) {
         /* Change the current working directory */
         if ((chdir("/")) < 0) {
                 syslog (LOG_ERR, "Cannot create a new SID.");
+                closelog();
                 exit(EXIT_FAILURE);
         }
 
@@ -60,7 +119,7 @@ int main(void) {
                 NotifyNotification *n;
                 notify_init("Test");
                 n = notify_notification_new ("Title","Body", NULL);
-                notify_notification_set_timeout(n, 5000); //3 seconds
+                notify_notification_set_timeout(n, notification_timeout * 1000); //3 seconds
                 if (!notify_notification_show (n, NULL)) {
                         g_error("Failed to send notification.\n");
                         return 1;
@@ -69,5 +128,6 @@ int main(void) {
 
                 sleep(3); /* wait 3 seconds */
         }
+        closelog();
         exit(EXIT_SUCCESS);
 }
