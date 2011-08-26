@@ -1,0 +1,7 @@
+[server]
+port = 5586
+notification_timeout=5 ; number of seconds before the notification goes away
+
+[client]
+server_addr=localhost
+port=5586
