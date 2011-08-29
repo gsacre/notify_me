@@ -1,0 +1,120 @@
+commit 44da3bf73556ac94ca82af55ff090e20c691c45b
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-29
+
+    Makefile is not part of the release
+
+ delete mode 100644 Makefile
+
+commit 6074a4d0aaa5ed9158b27fe4284567bd99bd5ebc
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    Fixed Makefile.in and tweaked a bit configure.in
+
+ create mode 100644 Makefile.in
+ create mode 100644 config.h.in
+ create mode 100755 configure
+ create mode 100644 configure.in
+ create mode 100644 notifmed.rc
+
+commit f16764dd18e6fbd8b2d18c944b73a36b1b156e72
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    Small changes in the Makefile
+
+
+commit 170ab79ee1910923d8042e61088c4c9bb046b507
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    Added Makefile
+
+ create mode 100644 Makefile
+
+commit ace8f914722c3116faf57b695babb382a99ba9a3
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    Added function to get a PID from a process name
+    
+    With this function, it is possible to get the PID from a process name.
+    The goal would be to allow the user to send a process name and the
+    daemon gets the name and tries to identify the PID.
+    Ideally, if it finds more than one, the daemon should ask which one.
+    It should also offer the option to bypass all that by giving directly a
+    PID.
+
+
+commit cd3ecbe850a830e3047ba8ddd28bbf2f25520ce4
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    Added the server side
+    
+    The daemon needs to start as a server to be triggered by a client.
+
+
+commit 97eaafcec7da0b122eaba1d269c583ac30770903
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    command line options
+    
+    This commit adds command line parsing.
+    The command line option takes over the configuration file.
+
+
+commit 1f26cf35333ae95d9f221fbcb54e1c9730d8e09e
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-26
+
+    iniparser: creation of a configuration file parsing
+    
+    The daemon now accepts a configuration file where it takes its
+    configuration from.
+    It's an INI file type:
+    
+    [server]
+    port = 54315
+    notification_timeout = 1
+    
+    If no configuration file is found, it takes the default values.
+
+
+commit 2d3f7b8c30800ee195c2a2bf993de812f4c47c50
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-24
+
+    syslog: adding log traces
+
+
+commit 959f391577718bec11d2c37e4878789f8b15fd5f
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-24
+
+    Renamed the file into something more meaningful
+
+ delete mode 100644 libnotify.c
+ create mode 100644 notifmed.c
+
+commit 22c9cc16d672cc5d43ea63449f170f0606dfbea3
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-24
+
+    Daemonize
+    
+    The goal is to have a kind of client-server mode so the server needs to
+    run as a daemon.
+    This commit performs the change to daemon.
+
+
+commit 1d2013adad7beeee192a773a62da1731909827ca
+Author: Gregory SACRE <gsa@softkinetic.com>
+Date:   2011-08-23
+
+    Initial commit
+
+ create mode 100644 README
+ create mode 100644 libnotify.c
