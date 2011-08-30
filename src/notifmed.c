@@ -32,10 +32,8 @@ unsigned int getProcessID(char *p_processname) {
         char target_name[252];
         int target_result;
         char exe_link[252];
-        int errorcount;
         int result;
 
-        errorcount=0;
         result=-1;
 
         // Open /proc/ directory
@@ -60,7 +58,7 @@ unsigned int getProcessID(char *p_processname) {
                                 // Searching for process name in the target name -- ??? could be a better search !!!
                                 if (strstr(target_name, p_processname) != NULL) {
                                         result = atoi(dir_entry_p->d_name);
-                                        printf("getProcessID(&#37;s) :Found. id = %d\n", p_processname, result);
+                                        //printf("getProcessID(&#37;s) :Found. id = %d\n", p_processname, result);
                                         closedir(dir_p);
                                         return result;
                                 }
