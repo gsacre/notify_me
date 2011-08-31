@@ -15,7 +15,7 @@ PKG_CHECK_MODULES([iniparser],[iniparser],[],
                   [AC_CHECK_LIB([iniparser],[iniparser_load])]
                   )
 
-AC_CHECK_HEADERS([glib.h unistd.h sys/types.h sys.stat.h stdlib.h stdio.h fnctl.h errno.h syslog.h string.h getopt.h sys/socket.h netinet/in.h dirent.h])
+AC_CHECK_HEADERS([glib.h unistd.h sys/types.h sys.stat.h stdlib.h stdio.h fnctl.h errno.h syslog.h string.h getopt.h sys/socket.h netinet/in.h dirent.h ctype.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT

@@ -14,6 +14,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <dirent.h>
+#include <ctype.h>
+
+#define NUL '\0'
 
 int file_exists (char * fileName) {
         struct stat buf;
@@ -25,6 +28,63 @@ int file_exists (char * fileName) {
         return 0;
 }
 
+char *trim(char *str)
+{
+        char *ibuf = str, *obuf = str;
+        int i = 0, cnt = 0;
+
+        /*
+         *       **  Trap NULL
+         *             */
+
+        if (str)
+        {
+                /*
+                 *             **  Remove leading spaces (from RMLEAD.C)
+                 *                         */
+
+                for (ibuf = str; *ibuf && isspace(*ibuf); ++ibuf)
+                        ;
+                if (str != ibuf)
+                        memmove(str, ibuf, ibuf - str);
+
+                /*
+                 *             **  Collapse embedded spaces (from LV1WS.C)
+                 *                         */
+
+                while (*ibuf)
+                {
+                        if (isspace(*ibuf) && cnt)
+                                ibuf++;
+                        else
+                        {
+                                if (!isspace(*ibuf))
+                                        cnt = 0;
+                                else
+                                {
+                                        *ibuf = ' ';
+                                        cnt = 1;
+                                }
+                                obuf[i++] = *ibuf++;
+                        }
+                }
+                obuf[i] = NUL;
+
+                /*
+                 *             **  Remove trailing spaces (from RMTRAIL.C)
+                 *                         */
+
+                while (--i >= 0)
+                {
+                        if (!isspace(obuf[i]))
+                                break;
+                }
+                obuf[++i] = NUL;
+        }
+        return str;
+}
+
+
 unsigned int getProcessID(char *p_processname) {
         DIR *dir_p;
         struct dirent *dir_entry_p;
@@ -33,6 +93,10 @@ unsigned int getProcessID(char *p_processname) {
         int target_result;
         char exe_link[252];
         int result;
+        char *process_trimmed;
+
+        process_trimmed = trim(p_processname);
+
 
         result=-1;
 
@@ -56,7 +120,7 @@ unsigned int getProcessID(char *p_processname) {
                         if (target_result > 0) {
                                 target_name[target_result] = 0;
                                 // Searching for process name in the target name -- ??? could be a better search !!!
-                                if (strstr(target_name, p_processname) != NULL) {
+                                if (strstr(target_name, process_trimmed) != NULL) {
                                         result = atoi(dir_entry_p->d_name);
                                         //printf("getProcessID(&#37;s) :Found. id = %d\n", p_processname, result);
                                         closedir(dir_p);
@@ -79,6 +143,7 @@ int main(int argc, char **argv) {
             c;
 
         socklen_t clilen;
+        char msg[256];
         char buffer[256];
         struct sockaddr_in serv_addr, cli_addr;
 
@@ -140,7 +205,7 @@ int main(int argc, char **argv) {
         }
 
         /* Our process ID and Session ID */
-        pid_t pid, sid;
+        pid_t pid, sid, pid_found;
 
         dictionary *dict;
 
@@ -248,20 +313,18 @@ int main(int argc, char **argv) {
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
 
-        /* Daemon-specific initialization goes here */
+        NotifyNotification *n;
+        notify_init("Initialization");
+        n = notify_notification_new ("notifmed","Initialized!\nMonitoring for client requests...", NULL);
+        notify_notification_set_timeout(n, notification_timeout * 1000); //3 seconds
+        if (!notify_notification_show (n, NULL)) {
+                g_error("Failed to send notification.\n");
+                return 1;
+        }
+        g_object_unref(G_OBJECT(n));
 
         /* The Big Loop */
         while (1) {
-                NotifyNotification *n;
-                notify_init("Test");
-                n = notify_notification_new ("Title","Body", NULL);
-                notify_notification_set_timeout(n, notification_timeout * 1000); //3 seconds
-                if (!notify_notification_show (n, NULL)) {
-                        g_error("Failed to send notification.\n");
-                        return 1;
-                }
-                g_object_unref(G_OBJECT(n));
-
                 newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
                 if (newsockfd < 0) {
                         syslog (LOG_ERR, "Cannot accept messages.");
@@ -283,7 +346,17 @@ int main(int argc, char **argv) {
                 }
 
                 syslog (LOG_INFO, "Here is the message: %s\n",buffer);
-                n = write(newsockfd,"I got your message",18);
+                pid_found = getProcessID((char *)buffer);
+
+                sprintf(msg,"Monitoring process: %s (PID: %i)",buffer, pid_found);
+                n = notify_notification_new ("notifmed",msg, NULL);
+                notify_notification_set_timeout(n, notification_timeout * 1000); //3 seconds
+                if (!notify_notification_show (n, NULL)) {
+                        g_error("Failed to send notification.\n");
+                        return 1;
+                }
+
+                n = write(newsockfd,msg,255);
 
                 if (n < 0) {
                         syslog (LOG_ERR, "Error writing to the socket.");
