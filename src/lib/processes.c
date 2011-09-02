@@ -1,6 +1,9 @@
+#include <stdlib.h>
+#include <unistd.h>
 #include "processes.h"
+#include "strings.h"
 
-unsigned int getProcessID(char *p_processname) {
+unsigned int* getProcessID(char *p_processname) {
         DIR *dir_p;
         struct dirent *dir_entry_p;
         char dir_name[40];
@@ -9,6 +12,8 @@ unsigned int getProcessID(char *p_processname) {
         char exe_link[252];
         int result;
         char *process_trimmed;
+        int *list_of_pids = (int*) malloc(255 * sizeof(int));
+        int index = 0;
 
         process_trimmed = trim(p_processname);
 
@@ -36,14 +41,12 @@ unsigned int getProcessID(char *p_processname) {
                                 // Searching for process name in the target name -- ??? could be a better search !!!
                                 if (strstr(target_name, process_trimmed) != NULL) {
                                         result = atoi(dir_entry_p->d_name);
-                                        //printf("getProcessID(&#37;s) :Found. id = %d\n", p_processname, result);
-                                        closedir(dir_p);
-                                        return result;
+                                        list_of_pids[index] = result;
+                                        index++;
                                 }
                         }
                 }
         }
         closedir(dir_p);
-        return result;
+        return &(list_of_pids[0]);
 }
-

@@ -11,6 +11,9 @@
 #include <getopt.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "lib/processes.h"
+#include "lib/strings.h"
+#include "lib/files.h"
 
 int main(int argc, char **argv) {
         int port = 5586,
